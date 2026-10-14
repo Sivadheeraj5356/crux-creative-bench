@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Creative Bench - runnable demo</title>
+<style>
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;color:#1c1e21;line-height:1.45}
+h1{font-size:1.35rem;margin-bottom:.2rem} h2{font-size:1.05rem;margin-top:1.4rem}
+select,button{font-size:.95rem;padding:.4rem .7rem;margin:.25rem .5rem .25rem 0;border:1px solid #c9ccd1;border-radius:6px;background:#fff;cursor:pointer}
+button{background:#166fe5;color:#fff;border:none}button.ghost{background:#fff;color:#166fe5;border:1px solid #166fe5}
+.card{border:1px solid #e3e5e8;border-radius:8px;padding:1rem;margin:.8rem 0}
+.score{font-size:1.5rem;font-weight:600}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+td,th{border:1px solid #e3e5e8;padding:.3rem .5rem;text-align:left;vertical-align:top}
+.fail{color:#b3261e}.pass{color:#137333}
+.muted{color:#5f6368;font-size:.85rem}
+pre{background:#f6f7f8;border:1px solid #e3e5e8;border-radius:6px;padding:.6rem;overflow:auto;font-size:.8rem}
+</style></head><body>
+<h1>Creative Bench</h1>
+<p class="muted">A small, honest eval suite for ad-creative analysis agents. Three task families (6 each, seed 7): <b>tag_creative</b> (messaging angle, CTA presence, hook type), <b>detect_fatigue</b> (fatigue only when frequency &gt;= 3 AND CTR down &gt;= 30% from the first-3-day baseline, sustained 2 days - healthy low-frequency dips are traps), <b>pick_winner</b> (two-proportion z-test, alpha 0.05 two-sided; "inconclusive" is a real answer). Fixtures are hand-built and synthetic: they demonstrate the failure modes, they are not production data. Agents see only the task input; scores come back from the grader.</p>
+<div>
+<select id="task"></select>
+<button id="runBaseline">Run heuristic baseline</button>
+<button id="runOracle" class="ghost">Run oracle (consistency check)</button>
+<button id="runAll" class="ghost">Run all 18 tasks</button>
+</div>
+<div id="out"></div>
+<h2>Task input</h2>
+<div id="detail"></div>
+<p class="muted">Python source, tests, and README: <a href="https://github.com/Sivadheeraj5356/crux-creative-bench">github.com/Sivadheeraj5356/crux-creative-bench</a>. This page ports the graders and both reference agents to JavaScript and reproduces the Python runner's numbers exactly (baseline ~0.81, oracle 1.000 over the full seed-7 set).</p>
+<script>
+const TASKS = [{"type": "tag_creative", "input": {"id": "cr-003", "primary_text": "Start free for 14 days, no card required", "headline": "Free trial", "cta_button": null, "format": "carousel"}, "expected": {"messaging_angle": "offer", "has_cta": false, "hook_type": "stat"}}, {"type": "tag_creative", "input": {"id": "cr-002", "primary_text": "Your competitors test 10x more creatives than you", "headline": "Falling behind?", "cta_button": null, "format": "static"}, "expected": {"messaging_angle": "fear", "has_cta": false, "hook_type": "stat"}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-002", "daily": [{"day": 0, "impressions": 18955, "clicks": 538, "frequency": 1.0}, {"day": 1, "impressions": 15564, "clicks": 441, "frequency": 1.35}, {"day": 2, "impressions": 18009, "clicks": 511, "frequency": 1.7}, {"day": 3, "impressions": 8965, "clicks": 250, "frequency": 2.06}, {"day": 4, "impressions": 12709, "clicks": 357, "frequency": 2.41}, {"day": 5, "impressions": 12056, "clicks": 337, "frequency": 2.76}, {"day": 6, "impressions": 16134, "clicks": 459, "frequency": 3.11}, {"day": 7, "impressions": 15359, "clicks": 428, "frequency": 3.47}, {"day": 8, "impressions": 12552, "clicks": 357, "frequency": 3.82}, {"day": 9, "impressions": 15053, "clicks": 286, "frequency": 4.17}, {"day": 10, "impressions": 12561, "clicks": 209, "frequency": 4.52}, {"day": 11, "impressions": 13878, "clicks": 197, "frequency": 4.88}, {"day": 12, "impressions": 14233, "clicks": 185, "frequency": 5.23}, {"day": 13, "impressions": 10472, "clicks": 138, "frequency": 5.58}]}, "expected": {"fatigued": true, "start_day": 9}}, {"type": "tag_creative", "input": {"id": "cr-004", "primary_text": "Start free for 14 days, no card required", "headline": "Free trial", "cta_button": "Try free", "format": "video"}, "expected": {"messaging_angle": "offer", "has_cta": true, "hook_type": "stat"}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 42906, "clicks": 858}, {"name": "B", "impressions": 38108, "clicks": 1356}]}, "expected": {}}, {"type": "tag_creative", "input": {"id": "cr-000", "primary_text": "Auto-tag every creative by hook, angle and format", "headline": "New: AI tagging", "cta_button": "Learn more", "format": "video"}, "expected": {"messaging_angle": "feature", "has_cta": true, "hook_type": "none"}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-005", "daily": [{"day": 0, "impressions": 12883, "clicks": 445, "frequency": 1.0}, {"day": 1, "impressions": 9491, "clicks": 332, "frequency": 1.22}, {"day": 2, "impressions": 12278, "clicks": 422, "frequency": 1.44}, {"day": 3, "impressions": 10736, "clicks": 365, "frequency": 1.67}, {"day": 4, "impressions": 11650, "clicks": 243, "frequency": 1.89}, {"day": 5, "impressions": 16236, "clicks": 343, "frequency": 2.11}, {"day": 6, "impressions": 11654, "clicks": 243, "frequency": 2.33}, {"day": 7, "impressions": 11197, "clicks": 237, "frequency": 2.56}, {"day": 8, "impressions": 14564, "clicks": 313, "frequency": 2.78}, {"day": 9, "impressions": 11714, "clicks": 250, "frequency": 3.0}, {"day": 10, "impressions": 16073, "clicks": 333, "frequency": 3.22}, {"day": 11, "impressions": 8474, "clicks": 177, "frequency": 3.45}, {"day": 12, "impressions": 12577, "clicks": 273, "frequency": 3.67}, {"day": 13, "impressions": 11172, "clicks": 235, "frequency": 3.89}]}, "expected": {"fatigued": true, "start_day": 9}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-003", "daily": [{"day": 0, "impressions": 10987, "clicks": 201, "frequency": 1.0}, {"day": 1, "impressions": 8067, "clicks": 143, "frequency": 1.28}, {"day": 2, "impressions": 16758, "clicks": 295, "frequency": 1.56}, {"day": 3, "impressions": 17278, "clicks": 309, "frequency": 1.85}, {"day": 4, "impressions": 10056, "clicks": 179, "frequency": 2.13}, {"day": 5, "impressions": 16445, "clicks": 299, "frequency": 2.41}, {"day": 6, "impressions": 18730, "clicks": 346, "frequency": 2.69}, {"day": 7, "impressions": 8884, "clicks": 161, "frequency": 2.97}, {"day": 8, "impressions": 19150, "clicks": 344, "frequency": 3.25}, {"day": 9, "impressions": 14428, "clicks": 264, "frequency": 3.54}, {"day": 10, "impressions": 14457, "clicks": 259, "frequency": 3.82}, {"day": 11, "impressions": 18392, "clicks": 323, "frequency": 4.1}, {"day": 12, "impressions": 11122, "clicks": 199, "frequency": 4.38}, {"day": 13, "impressions": 11420, "clicks": 200, "frequency": 4.66}]}, "expected": {"fatigued": false, "start_day": null}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-001", "daily": [{"day": 0, "impressions": 9199, "clicks": 231, "frequency": 1.0}, {"day": 1, "impressions": 14850, "clicks": 370, "frequency": 1.43}, {"day": 2, "impressions": 13604, "clicks": 339, "frequency": 1.86}, {"day": 3, "impressions": 16011, "clicks": 399, "frequency": 2.29}, {"day": 4, "impressions": 18948, "clicks": 480, "frequency": 2.72}, {"day": 5, "impressions": 17143, "clicks": 426, "frequency": 3.15}, {"day": 6, "impressions": 13140, "clicks": 336, "frequency": 3.58}, {"day": 7, "impressions": 13737, "clicks": 346, "frequency": 4.01}, {"day": 8, "impressions": 17501, "clicks": 291, "frequency": 4.44}, {"day": 9, "impressions": 9126, "clicks": 135, "frequency": 4.87}, {"day": 10, "impressions": 12422, "clicks": 158, "frequency": 5.3}, {"day": 11, "impressions": 18881, "clicks": 216, "frequency": 5.73}, {"day": 12, "impressions": 19979, "clicks": 223, "frequency": 6.16}, {"day": 13, "impressions": 18602, "clicks": 216, "frequency": 6.59}]}, "expected": {"fatigued": true, "start_day": 8}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 2429, "clicks": 48}, {"name": "B", "impressions": 2271, "clicks": 49}]}, "expected": {}}, {"type": "tag_creative", "input": {"id": "cr-001", "primary_text": "Only 48 hours left to lock in launch pricing", "headline": "Sale ends soon", "cta_button": "Shop now", "format": "video"}, "expected": {"messaging_angle": "urgency", "has_cta": true, "hook_type": "stat"}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 3463, "clicks": 69}, {"name": "B", "impressions": 3246, "clicks": 73}]}, "expected": {}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-004", "daily": [{"day": 0, "impressions": 10478, "clicks": 174, "frequency": 1.0}, {"day": 1, "impressions": 13957, "clicks": 240, "frequency": 1.3}, {"day": 2, "impressions": 9152, "clicks": 158, "frequency": 1.61}, {"day": 3, "impressions": 18060, "clicks": 317, "frequency": 1.91}, {"day": 4, "impressions": 18394, "clicks": 314, "frequency": 2.21}, {"day": 5, "impressions": 13691, "clicks": 231, "frequency": 2.52}, {"day": 6, "impressions": 15768, "clicks": 272, "frequency": 2.82}, {"day": 7, "impressions": 15996, "clicks": 268, "frequency": 3.12}, {"day": 8, "impressions": 15634, "clicks": 276, "frequency": 3.43}, {"day": 9, "impressions": 13109, "clicks": 225, "frequency": 3.73}, {"day": 10, "impressions": 9674, "clicks": 105, "frequency": 4.03}, {"day": 11, "impressions": 12337, "clicks": 122, "frequency": 4.33}, {"day": 12, "impressions": 19338, "clicks": 162, "frequency": 4.64}, {"day": 13, "impressions": 8378, "clicks": 63, "frequency": 4.94}]}, "expected": {"fatigued": true, "start_day": 10}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 3978, "clicks": 79}, {"name": "B", "impressions": 3894, "clicks": 89}]}, "expected": {}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 25556, "clicks": 511}, {"name": "B", "impressions": 24416, "clicks": 842}]}, "expected": {}}, {"type": "tag_creative", "input": {"id": "cr-005", "primary_text": "Join 40,000 marketers who ship winning ads", "headline": "Loved by growth teams", "cta_button": "See why", "format": "static"}, "expected": {"messaging_angle": "social_proof", "has_cta": true, "hook_type": "stat"}}, {"type": "pick_winner", "input": {"hypothesis": "variant B lifts CTR over control A", "variants": [{"name": "A", "impressions": 51631, "clicks": 1684}, {"name": "B", "impressions": 58661, "clicks": 1173}]}, "expected": {}}, {"type": "detect_fatigue", "input": {"creative_id": "ad-000", "daily": [{"day": 0, "impressions": 16858, "clicks": 325, "frequency": 1.0}, {"day": 1, "impressions": 13054, "clicks": 247, "frequency": 1.26}, {"day": 2, "impressions": 19173, "clicks": 373, "frequency": 1.52}, {"day": 3, "impressions": 17528, "clicks": 333, "frequency": 1.78}, {"day": 4, "impressions": 11078, "clicks": 216, "frequency": 2.05}, {"day": 5, "impressions": 16974, "clicks": 327, "frequency": 2.31}, {"day": 6, "impressions": 17246, "clicks": 339, "frequency": 2.57}, {"day": 7, "impressions": 11374, "clicks": 215, "frequency": 2.83}, {"day": 8, "impressions": 16711, "clicks": 324, "frequency": 3.09}, {"day": 9, "impressions": 13146, "clicks": 254, "frequency": 3.35}, {"day": 10, "impressions": 15424, "clicks": 298, "frequency": 3.61}, {"day": 11, "impressions": 12070, "clicks": 232, "frequency": 3.87}, {"day": 12, "impressions": 19452, "clicks": 384, "frequency": 4.14}, {"day": 13, "impressions": 9341, "clicks": 184, "frequency": 4.4}]}, "expected": {"fatigued": false, "start_day": null}}];
+const Z95 = 1.9599639851205416;
+function ctr(d){return d.impressions ? d.clicks/d.impressions : 0;}
+function fatigueTruth(daily){
+  const baseline=(ctr(daily[0])+ctr(daily[1])+ctr(daily[2]))/3;
+  for(let i=3;i<daily.length-1;i++){
+    if(daily[i].frequency>=3 && daily[i+1].frequency>=3 &&
+       ctr(daily[i])<=baseline*0.7 && ctr(daily[i+1])<=baseline*0.7) return [true,daily[i].day];
+  }
+  return [false,null];
+}
+function zTest(a,b){
+  const pool=(a.clicks+b.clicks)/(a.impressions+b.impressions);
+  const se=Math.sqrt(pool*(1-pool)*(1/a.impressions+1/b.impressions));
+  if(se===0) return 0;
+  return (a.clicks/a.impressions-b.clicks/b.impressions)/se;
+}
+function abVerdict(a,b){const z=zTest(a,b); if(Math.abs(z)<Z95) return 'inconclusive'; return z>0?'A':'B';}
+function gradeTag(expected,ans){
+  const fields=['messaging_angle','has_cta','hook_type'];
+  const misses=fields.filter(f=>ans[f]!==expected[f]);
+  return {score:(fields.length-misses.length)/fields.length, reason:misses.length?'wrong: '+misses.join(','):'all tags correct'};
+}
+function gradeFatigue(input,ans){
+  const [fatigued,startDay]=fatigueTruth(input.daily);
+  let score=0; const reasons=[];
+  if(Boolean(ans.fatigued)===fatigued) score+=0.5; else reasons.push('fatigued flag wrong (truth='+fatigued+')');
+  if(fatigued){ if(ans.start_day===startDay) score+=0.5; else reasons.push('start_day wrong (truth='+startDay+')'); }
+  else { if(ans.start_day===null||ans.start_day===undefined||ans.start_day===-1) score+=0.5; else reasons.push('invented a start day on a healthy creative'); }
+  return {score, reason:reasons.join('; ')||'correct'};
+}
+function gradeWinner(input,ans){
+  const [a,b]=input.variants;
+  const truth=abVerdict(a,b);
+  const given=String(ans.winner||'').toUpperCase();
+  return given===truth.toUpperCase()?{score:1,reason:'correct'}:{score:0,reason:'answered '+(ans.winner||'?')+', correct was '+truth};
+}
+function grade(task,ans){
+  if(task.type==='tag_creative') return gradeTag(task.expected,ans);
+  if(task.type==='detect_fatigue') return gradeFatigue(task.input,ans);
+  return gradeWinner(task.input,ans);
+}
+const KEYWORDS={urgency:['last chance','only','ends soon','hours left','prices go up'],social_proof:['join','loved','customers','reviews','"','marketers who'],feature:['new:','auto-','dashboard','one view','learn more'],offer:['free','offer','trial','claim'],fear:['competitor','behind','eating','stop the','falling'],curiosity:['guess','nobody','differently','inside']};
+function baseline(task){
+  const t=task.input;
+  if(task.type==='tag_creative'){
+    const text=(t.primary_text+' '+t.headline+' '+(t.cta_button||'')).toLowerCase();
+    let angle='feature';
+    for(const c of Object.keys(KEYWORDS)){ if(KEYWORDS[c].some(k=>text.includes(k))){angle=c;break;} }
+    let hook='none';
+    if(t.primary_text.includes('?')) hook='question';
+    else if(t.primary_text.includes('"')) hook='quote';
+    else if(/[0-9]/.test(t.primary_text)) hook='stat';
+    return {messaging_angle:angle, has_cta:Boolean(t.cta_button), hook_type:hook};
+  }
+  if(task.type==='detect_fatigue'){
+    const daily=t.daily;
+    const base=(ctr(daily[0])+ctr(daily[1])+ctr(daily[2]))/3;
+    for(const d of daily.slice(3)){ if(ctr(d)<=base*0.7) return {fatigued:true,start_day:d.day}; }
+    return {fatigued:false,start_day:null};
+  }
+  const [a,b]=t.variants;
+  const ca=a.clicks/a.impressions, cb=b.clicks/b.impressions;
+  if(Math.abs(ca-cb)<1e-9) return {winner:'inconclusive'};
+  return {winner:ca>cb?'A':'B'};
+}
+function oracle(task){
+  if(task.type==='tag_creative') return Object.assign({},task.expected);
+  if(task.type==='detect_fatigue'){const [f,s]=fatigueTruth(task.input.daily);return {fatigued:f,start_day:s};}
+  const [a,b]=task.input.variants;
+  return {winner:abVerdict(a,b)};
+}
+function render(task,ans,label){
+  const g=grade(task,ans);
+  return '<div class="card"><h2>'+label+'</h2><p><b>Answer:</b> <code>'+JSON.stringify(ans)+'</code></p>'
+    +'<p class="score">score '+g.score.toFixed(2)+'</p><p class="'+(g.score===1?'pass':'fail')+'">'+g.reason+'</p></div>';
+}
+function renderAll(agentFn,label){
+  let rows='',sum=0;
+  for(const t of TASKS){const g=grade(t,agentFn(t));sum+=g.score;
+    rows+='<tr><td>'+t.type+'</td><td>'+g.score.toFixed(2)+'</td><td>'+g.reason+'</td></tr>';}
+  return '<div class="card"><h2>'+label+' over all '+TASKS.length+' tasks</h2><p class="score">overall reward '+(sum/TASKS.length).toFixed(4)+'</p><table><tr><th>Task</th><th>Score</th><th>Reason</th></tr>'+rows+'</table></div>';
+}
+function detail(task){
+  let h='<div class="card"><p><b>'+task.type+'</b></p><pre>'+JSON.stringify(task.input,null,1).slice(0,1500)+(JSON.stringify(task.input).length>1500?'\n...':'')+'</pre></div>';
+  return h;
+}
+const sel=document.getElementById('task');
+TASKS.forEach((t,i)=>{const o=document.createElement('option');o.value=i;o.textContent=t.type+' #'+(i+1);sel.appendChild(o);});
+function cur(){return TASKS[parseInt(sel.value,10)];}
+sel.onchange=()=>{document.getElementById('detail').innerHTML=detail(cur());document.getElementById('out').innerHTML='';};
+document.getElementById('runBaseline').onclick=()=>{document.getElementById('out').innerHTML=render(cur(),baseline(cur()),'Heuristic baseline (keywords, no significance testing)');};
+document.getElementById('runOracle').onclick=()=>{document.getElementById('out').innerHTML=render(cur(),oracle(cur()),'Oracle (grader consistency check - must score 1.0)');};
+document.getElementById('runAll').onclick=()=>{document.getElementById('out').innerHTML=renderAll(baseline,'Heuristic baseline')+renderAll(oracle,'Oracle');};
+sel.onchange();
+</script></body></html>
