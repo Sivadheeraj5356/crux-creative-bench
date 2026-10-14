@@ -4,7 +4,7 @@ A small, honest eval suite for ad-creative analysis agents - built as a work
 sample for teams shipping AI creative strategists (like GetCrux).
 
 The bet behind it: an agent that tags creatives, calls creative fatigue and
-picks A/B winners should be measured by hidden graders on pinned tasks, not
+picks A/B winners should be measured by staged graders on pinned tasks, not
 by how its chat traces read. Scores are written by the runner only - an agent
 cannot award itself points.
 
@@ -41,7 +41,7 @@ Reference numbers on the shipped seed (7):
   testing.
 
 To plug in a real agent, pass any callable `(task_type, task_input) -> dict`
-to `run()` - answers only, scores come back from the hidden graders.
+to `run()` - answers only, scores come back from the grader.
 
 ## Why this shape
 
