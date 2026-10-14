@@ -3,7 +3,7 @@
 
 Built as a work sample for GetCrux (AI creative strategist for paid media).
 The bet: an agent that tags creatives, calls creative fatigue and picks A/B
-winners should be measured by hidden graders on pinned tasks, not by chat.
+winners should be measured by staged graders on pinned tasks, not by chat.
 
 Three task families, 0-1 reward per trial, written scores only:
 
