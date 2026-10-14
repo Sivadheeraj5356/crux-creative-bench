@@ -32,6 +32,10 @@ python creative_bench.py run --agent oracle     # grader consistency: must be 1.
 python creative_bench.py test                   # unittest suite
 ```
 
+Browser demo: <https://sivadheeraj5356.github.io/crux-creative-bench/> - the
+graders and both reference agents ported to JavaScript; reproduces the
+Python runner's numbers exactly on the full seed-7 set.
+
 Reference numbers on the shipped seed (7):
 
 - oracle: **1.000** (grader consistency)
